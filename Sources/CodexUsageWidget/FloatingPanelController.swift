@@ -56,7 +56,7 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
     }
 
     private static func initialFrame() -> NSRect {
-        let size = NSSize(width: 280, height: 132)
+        let size = NSSize(width: 280, height: 148)
         let defaults = UserDefaults.standard
         if defaults.object(forKey: DefaultsKey.originX) != nil,
            defaults.object(forKey: DefaultsKey.originY) != nil {

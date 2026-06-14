@@ -16,7 +16,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .frame(width: 280, height: 132)
+        .frame(width: 280, height: 148)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -68,32 +68,51 @@ struct ContentView: View {
 
 private struct HeatmapView: View {
     let days: [DailyUsage]
+    @State private var hoveredDay: DailyUsage?
 
     private var peak: Int64 {
         max(days.map(\.tokens).max() ?? 0, 1)
     }
 
     var body: some View {
-        HStack(spacing: 7) {
-            ForEach(days) { day in
-                VStack(spacing: 3) {
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(color(for: day.tokens))
-                        .frame(width: 27, height: 24)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .stroke(Color.black.opacity(0.08), lineWidth: 0.5)
-                        )
-                        .help(tooltip(for: day))
+        VStack(spacing: 4) {
+            HStack(spacing: 7) {
+                ForEach(days) { day in
+                    VStack(spacing: 3) {
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(color(for: day.tokens))
+                            .frame(width: 27, height: 24)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                    .stroke(strokeColor(for: day), lineWidth: hoveredDay?.id == day.id ? 1.2 : 0.5)
+                            )
 
-                    Text(weekday(for: day.date))
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        Text(weekday(for: day.date))
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(width: 29)
+                    .contentShape(Rectangle())
+                    .onHover { isHovering in
+                        if isHovering {
+                            hoveredDay = day
+                        } else if hoveredDay?.id == day.id {
+                            hoveredDay = nil
+                        }
+                    }
+                    .help(tooltip(for: day))
                 }
-                .frame(width: 29)
             }
+
+            Text(hoverDetailText)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, minHeight: 12, alignment: .center)
+                .opacity(hoveredDay == nil ? 0 : 1)
         }
-        .frame(height: 37)
+        .frame(height: 53)
     }
 
     private func color(for tokens: Int64) -> Color {
@@ -113,6 +132,19 @@ private struct HeatmapView: View {
         }
     }
 
+    private func strokeColor(for day: DailyUsage) -> Color {
+        if hoveredDay?.id == day.id {
+            return .primary.opacity(0.55)
+        }
+
+        return Color.black.opacity(0.08)
+    }
+
+    private var hoverDetailText: String {
+        guard let hoveredDay else { return " " }
+        return "\(displayDate(for: hoveredDay.date)) \(Formatters.fullTokenCount(hoveredDay.tokens)) tokens"
+    }
+
     private func tooltip(for day: DailyUsage) -> String {
         let ratio = Int((Double(day.tokens) / Double(peak) * 100).rounded())
         let source = day.source == .account ? "账户用量" : day.source == .localEstimate ? "本地估算" : "缓存"
@@ -127,6 +159,18 @@ private struct HeatmapView: View {
         let symbols = ["日", "一", "二", "三", "四", "五", "六"]
         let index = Calendar.current.component(.weekday, from: date) - 1
         return symbols[index.clamped(to: 0...6)]
+    }
+
+    private func displayDate(for dateKey: String) -> String {
+        guard let date = DateCoding.dayFormatter.date(from: dateKey) else {
+            return dateKey
+        }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.timeZone = .current
+        formatter.dateFormat = "M月d日"
+        return formatter.string(from: date)
     }
 }
 
