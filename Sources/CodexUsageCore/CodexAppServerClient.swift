@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 public enum CodexAppServerError: Error, LocalizedError, Equatable {
@@ -6,6 +7,8 @@ public enum CodexAppServerError: Error, LocalizedError, Equatable {
     case invalidResponse(String)
     case rpcError(code: Int?, message: String)
     case writeFailed
+    case requestTimedOut(String)
+    case ioError(String)
 
     public var errorDescription: String? {
         switch self {
@@ -19,12 +22,17 @@ public enum CodexAppServerError: Error, LocalizedError, Equatable {
             message
         case .writeFailed:
             "Failed to write request to Codex app-server."
+        case let .requestTimedOut(method):
+            "Codex app-server request timed out: \(method)."
+        case let .ioError(message):
+            message
         }
     }
 }
 
 public actor CodexAppServerClient {
     private let executablePath: String
+    private let requestTimeoutSeconds: TimeInterval
     private var process: Process?
     private var input: FileHandle?
     private var output: FileHandle?
@@ -32,8 +40,12 @@ public actor CodexAppServerClient {
     private var nextRequestId = 1
     private var didInitialize = false
 
-    public init(executablePath: String = "/Applications/Codex.app/Contents/Resources/codex") {
+    public init(
+        executablePath: String = "/Applications/Codex.app/Contents/Resources/codex",
+        requestTimeoutSeconds: TimeInterval = 8
+    ) {
         self.executablePath = executablePath
+        self.requestTimeoutSeconds = requestTimeoutSeconds
     }
 
     deinit {
@@ -104,10 +116,22 @@ public actor CodexAppServerClient {
         process.standardError = Pipe()
 
         try process.run()
+        try Self.setNonBlocking(stdoutPipe.fileHandleForReading.fileDescriptor)
 
         self.process = process
         self.input = stdinPipe.fileHandleForWriting
         self.output = stdoutPipe.fileHandleForReading
+    }
+
+    private static func setNonBlocking(_ fileDescriptor: Int32) throws {
+        let flags = fcntl(fileDescriptor, F_GETFL, 0)
+        guard flags >= 0 else {
+            throw CodexAppServerError.ioError("Failed to read app-server stdout flags.")
+        }
+
+        guard fcntl(fileDescriptor, F_SETFL, flags | O_NONBLOCK) >= 0 else {
+            throw CodexAppServerError.ioError("Failed to set app-server stdout to non-blocking mode.")
+        }
     }
 
     private func ensureInitialized() async throws {
@@ -154,7 +178,7 @@ public actor CodexAppServerClient {
         try writeRequest(id: id, method: method, params: params)
 
         while true {
-            let line = try readLine()
+            let line = try await readLine(method: method)
             guard let data = line.data(using: .utf8) else {
                 throw CodexAppServerError.invalidResponse(line)
             }
@@ -213,21 +237,49 @@ public actor CodexAppServerClient {
         return try JSONSerialization.jsonObject(with: data)
     }
 
-    private func readLine() throws -> String {
+    private func readLine(method: String) async throws -> String {
         guard let output else { throw CodexAppServerError.processTerminated }
+        let deadline = Date().addingTimeInterval(requestTimeoutSeconds)
+        var buffer = [UInt8](repeating: 0, count: 4096)
 
         while true {
+            try Task.checkCancellation()
+
             if let newline = lineBuffer.firstIndex(of: 0x0A) {
                 let lineData = lineBuffer[..<newline]
                 lineBuffer.removeSubrange(...newline)
                 return String(decoding: lineData, as: UTF8.self)
             }
 
-            let chunk = output.readData(ofLength: 4096)
-            if chunk.isEmpty {
+            if let process, !process.isRunning {
+                stop()
                 throw CodexAppServerError.processTerminated
             }
-            lineBuffer.append(chunk)
+
+            if Date() >= deadline {
+                stop()
+                throw CodexAppServerError.requestTimedOut(method)
+            }
+
+            let count = Darwin.read(output.fileDescriptor, &buffer, buffer.count)
+            if count > 0 {
+                lineBuffer.append(contentsOf: buffer.prefix(count))
+                continue
+            }
+
+            if count == 0 {
+                stop()
+                throw CodexAppServerError.processTerminated
+            }
+
+            let error = errno
+            if error == EAGAIN || error == EWOULDBLOCK || error == EINTR {
+                try await Task.sleep(nanoseconds: 50_000_000)
+                continue
+            }
+
+            stop()
+            throw CodexAppServerError.ioError("Failed to read app-server stdout: errno \(error).")
         }
     }
 }
