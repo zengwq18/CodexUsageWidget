@@ -5,13 +5,24 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 APP_DIR="${ROOT_DIR}/dist/CodexUsageWidget.app"
 CONTENTS_DIR="${APP_DIR}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
+RESOURCES_DIR="${CONTENTS_DIR}/Resources"
+ICON_FILE="${ROOT_DIR}/Resources/AppIcon.icns"
 
 cd "${ROOT_DIR}"
-swift build -c release
+mkdir -p ".build/module-cache"
+export CLANG_MODULE_CACHE_PATH="${ROOT_DIR}/.build/module-cache"
+swift build --disable-sandbox -c release
 
 rm -rf "${APP_DIR}"
-mkdir -p "${MACOS_DIR}"
+mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
 cp ".build/release/CodexUsageWidget" "${MACOS_DIR}/CodexUsageWidget"
+
+if [[ ! -f "${ICON_FILE}" ]]; then
+  echo "Missing ${ICON_FILE}. Run: swift Scripts/generate-icon.swift" >&2
+  exit 1
+fi
+
+cp "${ICON_FILE}" "${RESOURCES_DIR}/AppIcon.icns"
 
 cat > "${CONTENTS_DIR}/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -24,6 +35,8 @@ cat > "${CONTENTS_DIR}/Info.plist" <<'PLIST'
   <string>CodexUsageWidget</string>
   <key>CFBundleIdentifier</key>
   <string>local.codex-usage-widget</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>

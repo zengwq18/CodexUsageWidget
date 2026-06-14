@@ -18,3 +18,4 @@ CodexUsageWidget.app/
 *.ipa
 .codex/
 auth.json
+Resources/*.iconset/
