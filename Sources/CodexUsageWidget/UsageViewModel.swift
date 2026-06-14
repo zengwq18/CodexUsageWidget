@@ -2,11 +2,46 @@ import CodexUsageCore
 import Combine
 import Foundation
 
+enum RefreshIntervalUnit: String, CaseIterable, Identifiable {
+    case minutes
+    case hours
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .minutes:
+            return "分钟"
+        case .hours:
+            return "小时"
+        }
+    }
+
+    var minuteMultiplier: Int {
+        switch self {
+        case .minutes:
+            return 1
+        case .hours:
+            return 60
+        }
+    }
+
+    var valueRange: ClosedRange<Int> {
+        switch self {
+        case .minutes:
+            return 1...1_440
+        case .hours:
+            return 1...24
+        }
+    }
+}
+
 @MainActor
 final class UsageViewModel: ObservableObject {
     private enum DefaultsKey {
         static let pinned = "panel.pinned"
         static let refreshIntervalMinutes = "refresh.interval.minutes"
+        static let refreshIntervalUnit = "refresh.interval.unit"
         static let launchAtLogin = "launch.at.login.requested"
         static let showsSevenDayUsage = "panel.showsSevenDayUsage"
     }
@@ -24,6 +59,11 @@ final class UsageViewModel: ObservableObject {
         didSet {
             UserDefaults.standard.set(refreshIntervalMinutes, forKey: DefaultsKey.refreshIntervalMinutes)
             restartTimer()
+        }
+    }
+    @Published private(set) var refreshIntervalUnit: RefreshIntervalUnit {
+        didSet {
+            UserDefaults.standard.set(refreshIntervalUnit.rawValue, forKey: DefaultsKey.refreshIntervalUnit)
         }
     }
     @Published var showsSevenDayUsage: Bool {
@@ -48,9 +88,19 @@ final class UsageViewModel: ObservableObject {
         self.pinned = UserDefaults.standard.object(forKey: DefaultsKey.pinned) as? Bool ?? true
         self.showsSevenDayUsage = UserDefaults.standard.object(forKey: DefaultsKey.showsSevenDayUsage) as? Bool ?? true
         let savedInterval = UserDefaults.standard.integer(forKey: DefaultsKey.refreshIntervalMinutes)
-        self.refreshIntervalMinutes = savedInterval == 0 ? 5 : savedInterval.clamped(to: 1...60)
+        self.refreshIntervalMinutes = savedInterval == 0 ? 5 : savedInterval.clamped(to: 1...1_440)
+        if let savedUnit = UserDefaults.standard.string(forKey: DefaultsKey.refreshIntervalUnit),
+           let refreshIntervalUnit = RefreshIntervalUnit(rawValue: savedUnit) {
+            self.refreshIntervalUnit = refreshIntervalUnit
+        } else {
+            self.refreshIntervalUnit = .minutes
+        }
         self.launchAtLogin = UserDefaults.standard.object(forKey: DefaultsKey.launchAtLogin) as? Bool
             ?? LaunchAtLoginController.isEnabled
+    }
+
+    var refreshIntervalValue: Int {
+        value(for: refreshIntervalUnit, minutes: refreshIntervalMinutes)
     }
 
     deinit {
@@ -86,6 +136,18 @@ final class UsageViewModel: ObservableObject {
             launchAtLogin = LaunchAtLoginController.isEnabled
             statusText = "开机启动设置失败"
         }
+    }
+
+    func setRefreshIntervalValue(_ value: Int) {
+        let clampedValue = value.clamped(to: refreshIntervalUnit.valueRange)
+        refreshIntervalMinutes = clampedValue * refreshIntervalUnit.minuteMultiplier
+    }
+
+    func setRefreshIntervalUnit(_ unit: RefreshIntervalUnit) {
+        guard refreshIntervalUnit != unit else { return }
+        let convertedValue = value(for: unit, minutes: refreshIntervalMinutes)
+        refreshIntervalUnit = unit
+        setRefreshIntervalValue(convertedValue)
     }
 
     private func restartTimer() {
@@ -124,6 +186,15 @@ final class UsageViewModel: ObservableObject {
             statusText = "\(elapsed / 3_600) 小时前\(suffix)"
         default:
             statusText = "\(elapsed / 86_400) 天前\(suffix)"
+        }
+    }
+
+    private func value(for unit: RefreshIntervalUnit, minutes: Int) -> Int {
+        switch unit {
+        case .minutes:
+            return minutes.clamped(to: unit.valueRange)
+        case .hours:
+            return Int(ceil(Double(minutes) / 60.0)).clamped(to: unit.valueRange)
         }
     }
 }
