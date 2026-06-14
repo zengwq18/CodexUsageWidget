@@ -8,3 +8,13 @@ DerivedData/
 build/
 dist/
 CodexUsageWidget.app/
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.mobileprovision
+*.xcarchive
+*.ipa
+.codex/
+auth.json

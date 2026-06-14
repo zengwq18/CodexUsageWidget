@@ -378,7 +378,9 @@ public struct AccountUsageResponse: Decodable, Sendable {
 
     public func dailyUsage(now: Date = Date()) -> [DailyUsage] {
         let buckets = dailyUsageBuckets ?? []
-        let byDate = Dictionary(uniqueKeysWithValues: buckets.map { ($0.startDate, $0.tokens) })
+        let byDate = buckets.reduce(into: [String: Int64]()) { totals, bucket in
+            totals[bucket.startDate, default: 0] += bucket.tokens
+        }
         return DateCoding.lastSevenDateKeys(now: now).map { key in
             DailyUsage(date: key, tokens: byDate[key] ?? 0, source: .account)
         }

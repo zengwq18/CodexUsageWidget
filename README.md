@@ -35,20 +35,25 @@ dist/CodexUsageWidget.app
 
 建议从 Finder 或普通 Terminal 启动打包后的 app。如果从受限沙盒环境里启动，Codex app-server 可能无法访问本地状态数据库，导致额度数据不可用。
 
+当前构建脚本生成的是未签名 app。首次运行时，macOS 可能会提示来源不明，需要在系统安全设置中手动允许。
+
 ### 数据来源与隐私
 
 主要数据来源是本地 Codex app-server 协议：
 
 - `account/usage/read`
 - `account/rateLimits/read`
-- `account/rateLimits/updated`
+
+额度更新目前通过定时轮询 `account/rateLimits/read` 实现。
 
 如果账号用量数据不可用，应用会回退读取本地 Codex 会话 JSONL 文件：
 
 - `~/.codex/sessions`
 - `~/.codex/archived_sessions`
 
-本项目不会读取或保存 `auth.json`。它只在本机读取展示用量信息，不包含远程服务端。
+回退读取时，本工具会遍历这些目录中的 `.jsonl` 文件，只尝试解析 `event_msg` 中 `payload.type == "token_count"` 的事件，并读取 `last_token_usage.total_tokens` 统计字段。它不会展示会话正文，不会读取或保存 `auth.json`，也不会向远程服务器上传数据。
+
+本工具会在 macOS Application Support 目录下保存一个本地缓存文件，通常位于 `~/Library/Application Support/CodexUsageWidget/cache.json`。缓存用于离线或刷新失败时显示最近一次用量数据，不包含认证信息。
 
 ### 开源协议
 
@@ -99,20 +104,25 @@ dist/CodexUsageWidget.app
 
 It is best to launch the bundled app from Finder or a normal Terminal session. If launched from a restricted sandbox, the Codex app-server may be unable to access its local state database, which can prevent quota data from loading.
 
+The build script currently creates an unsigned app. On first launch, macOS may warn that the app is from an unidentified developer, and you may need to allow it manually in System Settings.
+
 ### Data Sources and Privacy
 
 The primary data source is the local Codex app-server protocol:
 
 - `account/usage/read`
 - `account/rateLimits/read`
-- `account/rateLimits/updated`
+
+Quota updates are currently implemented by periodically polling `account/rateLimits/read`.
 
 If account usage data is unavailable, the app falls back to local Codex session JSONL files:
 
 - `~/.codex/sessions`
 - `~/.codex/archived_sessions`
 
-This project does not read or store `auth.json`. It only reads local usage data for display and does not include a remote backend.
+When using the fallback path, the app scans `.jsonl` files in these folders, only attempts to parse `event_msg` entries whose `payload.type` is `token_count`, and reads the `last_token_usage.total_tokens` statistics field. It does not display conversation contents, does not read or store `auth.json`, and does not upload data to a remote server.
+
+The app stores a local cache file under macOS Application Support, usually at `~/Library/Application Support/CodexUsageWidget/cache.json`. The cache is used to show the most recent usage snapshot when offline or when refresh fails, and it does not contain authentication data.
 
 ### License
 

@@ -66,7 +66,17 @@ public struct UsageRepository: Sendable {
     }
 
     private func normalized(_ days: [DailyUsage]) -> [DailyUsage] {
-        let byDate = Dictionary(uniqueKeysWithValues: days.map { ($0.date, $0) })
+        let byDate = days.reduce(into: [String: DailyUsage]()) { normalized, day in
+            if let existing = normalized[day.date] {
+                normalized[day.date] = DailyUsage(
+                    date: day.date,
+                    tokens: existing.tokens + day.tokens,
+                    source: existing.source
+                )
+            } else {
+                normalized[day.date] = day
+            }
+        }
         return DateCoding.lastSevenDateKeys().map { key in
             byDate[key] ?? DailyUsage(date: key, tokens: 0, source: .cache)
         }

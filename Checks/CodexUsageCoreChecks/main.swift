@@ -62,6 +62,24 @@ func checkMissingDailyUsageBucketsBecomeZeros() throws {
     try check(days.allSatisfy { $0.tokens == 0 }, "missing daily buckets should be zeros")
 }
 
+func checkDuplicateDailyUsageBucketsAreSummed() throws {
+    let payload = Data("""
+    {
+      "summary": {},
+      "dailyUsageBuckets": [
+        { "startDate": "2026-06-14", "tokens": 1000 },
+        { "startDate": "2026-06-14", "tokens": 2500 }
+      ]
+    }
+    """.utf8)
+
+    let response = try JSONDecoder().decode(AccountUsageResponse.self, from: payload)
+    let now = try require(DateCoding.dayFormatter.date(from: "2026-06-14"), "failed to build fixed date")
+    let days = response.dailyUsage(now: now)
+
+    try check(days.first { $0.date == "2026-06-14" }?.tokens == 3500, "duplicate daily buckets should be summed")
+}
+
 func checkRateLimitsPreferCodexBucketAndClassifyWindows() throws {
     let payload = Data("""
     {
@@ -164,6 +182,7 @@ func makeTempDirectory() throws -> URL {
 let checks: [(String, () throws -> Void)] = [
     ("dailyUsageBucketsMapToLastSevenDays", checkDailyUsageBucketsMapToLastSevenDays),
     ("missingDailyUsageBucketsBecomeZeros", checkMissingDailyUsageBucketsBecomeZeros),
+    ("duplicateDailyUsageBucketsAreSummed", checkDuplicateDailyUsageBucketsAreSummed),
     ("rateLimitsPreferCodexBucketAndClassifyWindows", checkRateLimitsPreferCodexBucketAndClassifyWindows),
     ("rateLimitsFallbackToSingleBucket", checkRateLimitsFallbackToSingleBucket),
     ("tokenCountEventsAggregateByLocalDay", checkTokenCountEventsAggregateByLocalDay),

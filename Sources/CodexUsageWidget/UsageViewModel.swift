@@ -39,6 +39,7 @@ final class UsageViewModel: ObservableObject {
 
     private let repository: UsageRepository
     private var refreshTask: Task<Void, Never>?
+    private var statusTextTask: Task<Void, Never>?
 
     init(repository: UsageRepository = UsageRepository()) {
         self.repository = repository
@@ -54,11 +55,13 @@ final class UsageViewModel: ObservableObject {
 
     deinit {
         refreshTask?.cancel()
+        statusTextTask?.cancel()
     }
 
     func start() {
         refresh()
         restartTimer()
+        restartStatusTextTimer()
     }
 
     func refresh() {
@@ -70,7 +73,7 @@ final class UsageViewModel: ObservableObject {
             let nextSnapshot = await repository.refresh()
             snapshot = nextSnapshot
             isRefreshing = false
-            statusText = nextSnapshot.isStale ? "本地缓存" : "刚刚更新"
+            updateStatusText()
         }
     }
 
@@ -93,6 +96,34 @@ final class UsageViewModel: ObservableObject {
                 try? await Task.sleep(nanoseconds: interval * 1_000_000_000)
                 self?.refresh()
             }
+        }
+    }
+
+    private func restartStatusTextTimer() {
+        statusTextTask?.cancel()
+        statusTextTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
+                self?.updateStatusText()
+            }
+        }
+    }
+
+    private func updateStatusText(now: Date = Date()) {
+        guard !isRefreshing else { return }
+
+        let elapsed = max(0, Int(now.timeIntervalSince(snapshot.updatedAt)))
+        let suffix = snapshot.isStale ? "缓存" : "更新"
+
+        switch elapsed {
+        case 0..<60:
+            statusText = "刚刚\(suffix)"
+        case 60..<3_600:
+            statusText = "\(elapsed / 60) 分钟前\(suffix)"
+        case 3_600..<86_400:
+            statusText = "\(elapsed / 3_600) 小时前\(suffix)"
+        default:
+            statusText = "\(elapsed / 86_400) 天前\(suffix)"
         }
     }
 }
