@@ -116,20 +116,19 @@ private struct HeatmapView: View {
     }
 
     private func color(for tokens: Int64) -> Color {
-        guard tokens > 0 else { return Color(nsColor: .quaternaryLabelColor).opacity(0.35) }
-        let ratio = Double(tokens) / Double(peak)
-        switch ratio {
-        case ..<0.25:
-            return Color(red: 0.22, green: 0.68, blue: 0.40)
-        case ..<0.50:
-            return Color(red: 0.10, green: 0.62, blue: 0.68)
-        case ..<0.75:
-            return Color(red: 0.90, green: 0.60, blue: 0.18)
-        case ..<1.0:
-            return Color(red: 0.86, green: 0.30, blue: 0.22)
-        default:
-            return Color(red: 0.58, green: 0.18, blue: 0.58)
+        guard tokens > 0 else {
+            return Color(nsColor: .quaternaryLabelColor).opacity(0.35)
         }
+
+        let ratio = min(max(Double(tokens) / Double(peak), 0), 1)
+        let start = (red: 0.79, green: 0.90, blue: 1.00)
+        let end = (red: 0.16, green: 0.58, blue: 0.96)
+
+        return Color(
+            red: start.red + (end.red - start.red) * ratio,
+            green: start.green + (end.green - start.green) * ratio,
+            blue: start.blue + (end.blue - start.blue) * ratio
+        )
     }
 
     private func strokeColor(for day: DailyUsage) -> Color {
@@ -220,14 +219,15 @@ private struct QuotaRow: View {
 
     private var fillColor: Color {
         guard let window else { return .secondary.opacity(0.25) }
-        switch window.remainingPercent {
-        case 50...100:
-            return Color(red: 0.17, green: 0.62, blue: 0.42)
-        case 20..<50:
-            return Color(red: 0.90, green: 0.60, blue: 0.18)
-        default:
-            return Color(red: 0.86, green: 0.30, blue: 0.22)
-        }
+        let ratio = Double(window.remainingPercent) / 100.0
+        let start = (red: 0.58, green: 0.78, blue: 0.98)
+        let end = (red: 0.20, green: 0.58, blue: 0.96)
+
+        return Color(
+            red: start.red + (end.red - start.red) * ratio,
+            green: start.green + (end.green - start.green) * ratio,
+            blue: start.blue + (end.blue - start.blue) * ratio
+        )
     }
 
     private var percentText: String {
