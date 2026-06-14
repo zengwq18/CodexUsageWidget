@@ -18,7 +18,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .frame(width: 280, height: viewModel.showsSevenDayUsage ? 148 : 100)
+        .frame(width: 280, height: viewModel.showsSevenDayUsage ? 148 : 94)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)

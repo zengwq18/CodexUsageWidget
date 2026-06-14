@@ -6,7 +6,7 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
     private enum Layout {
         static let width: CGFloat = 280
         static let expandedHeight: CGFloat = 148
-        static let compactHeight: CGFloat = 100
+        static let compactHeight: CGFloat = 94
     }
 
     private enum DefaultsKey {
