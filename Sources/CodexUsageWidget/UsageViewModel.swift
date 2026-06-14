@@ -8,6 +8,7 @@ final class UsageViewModel: ObservableObject {
         static let pinned = "panel.pinned"
         static let refreshIntervalMinutes = "refresh.interval.minutes"
         static let launchAtLogin = "launch.at.login.requested"
+        static let showsSevenDayUsage = "panel.showsSevenDayUsage"
     }
 
     @Published private(set) var snapshot: UsageSnapshot
@@ -25,9 +26,16 @@ final class UsageViewModel: ObservableObject {
             restartTimer()
         }
     }
+    @Published var showsSevenDayUsage: Bool {
+        didSet {
+            UserDefaults.standard.set(showsSevenDayUsage, forKey: DefaultsKey.showsSevenDayUsage)
+            onShowsSevenDayUsageChanged?(showsSevenDayUsage)
+        }
+    }
     @Published private(set) var launchAtLogin: Bool
 
     var onPinnedChanged: ((Bool) -> Void)?
+    var onShowsSevenDayUsageChanged: ((Bool) -> Void)?
 
     private let repository: UsageRepository
     private var refreshTask: Task<Void, Never>?
@@ -37,6 +45,7 @@ final class UsageViewModel: ObservableObject {
         let cached = CacheStore().load()
         self.snapshot = cached ?? .empty
         self.pinned = UserDefaults.standard.object(forKey: DefaultsKey.pinned) as? Bool ?? true
+        self.showsSevenDayUsage = UserDefaults.standard.object(forKey: DefaultsKey.showsSevenDayUsage) as? Bool ?? true
         let savedInterval = UserDefaults.standard.integer(forKey: DefaultsKey.refreshIntervalMinutes)
         self.refreshIntervalMinutes = savedInterval == 0 ? 5 : savedInterval.clamped(to: 1...60)
         self.launchAtLogin = UserDefaults.standard.object(forKey: DefaultsKey.launchAtLogin) as? Bool

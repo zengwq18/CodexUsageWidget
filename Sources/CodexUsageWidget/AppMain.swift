@@ -25,6 +25,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         viewModel.onPinnedChanged = { [weak panelController] pinned in
             panelController?.setPinned(pinned)
         }
+        viewModel.onShowsSevenDayUsageChanged = { [weak panelController] showsSevenDayUsage in
+            panelController?.setShowsSevenDayUsage(showsSevenDayUsage)
+        }
 
         panelController.show()
         viewModel.start()

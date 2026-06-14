@@ -8,7 +8,9 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 8) {
             header
-            HeatmapView(days: viewModel.snapshot.days)
+            if viewModel.showsSevenDayUsage {
+                HeatmapView(days: viewModel.snapshot.days)
+            }
             VStack(spacing: 5) {
                 QuotaRow(title: "5 小时", window: viewModel.snapshot.fiveHour)
                 QuotaRow(title: "本周", window: viewModel.snapshot.weekly)
@@ -16,7 +18,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .frame(width: 280, height: 148)
+        .frame(width: 280, height: viewModel.showsSevenDayUsage ? 148 : 100)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)

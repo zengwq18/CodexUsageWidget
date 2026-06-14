@@ -16,6 +16,8 @@ struct SettingsView: View {
 
             Toggle("置顶显示", isOn: $viewModel.pinned)
 
+            Toggle("显示 7 日用量", isOn: $viewModel.showsSevenDayUsage)
+
             Stepper(
                 "每 \(viewModel.refreshIntervalMinutes) 分钟刷新",
                 value: $viewModel.refreshIntervalMinutes,

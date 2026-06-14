@@ -3,6 +3,12 @@ import SwiftUI
 
 @MainActor
 final class FloatingPanelController: NSObject, NSWindowDelegate {
+    private enum Layout {
+        static let width: CGFloat = 280
+        static let expandedHeight: CGFloat = 148
+        static let compactHeight: CGFloat = 100
+    }
+
     private enum DefaultsKey {
         static let originX = "panel.origin.x"
         static let originY = "panel.origin.y"
@@ -13,7 +19,7 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
 
     init(viewModel: UsageViewModel) {
         self.viewModel = viewModel
-        let rect = Self.initialFrame()
+        let rect = Self.initialFrame(showsSevenDayUsage: viewModel.showsSevenDayUsage)
         self.panel = NSPanel(
             contentRect: rect,
             styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
@@ -39,6 +45,7 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
         panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
         panel.standardWindowButton(.zoomButton)?.isHidden = true
         setPinned(viewModel.pinned)
+        setShowsSevenDayUsage(viewModel.showsSevenDayUsage)
     }
 
     func show() {
@@ -49,14 +56,27 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
         panel.level = pinned ? .floating : .normal
     }
 
+    func setShowsSevenDayUsage(_ showsSevenDayUsage: Bool) {
+        let height = Self.height(showsSevenDayUsage: showsSevenDayUsage)
+        let topY = panel.frame.maxY
+        panel.setContentSize(NSSize(width: Layout.width, height: height))
+
+        var frame = panel.frame
+        frame.origin.y = topY - frame.height
+        panel.setFrame(frame, display: true)
+    }
+
     func windowDidMove(_ notification: Notification) {
         let origin = panel.frame.origin
         UserDefaults.standard.set(origin.x, forKey: DefaultsKey.originX)
         UserDefaults.standard.set(origin.y, forKey: DefaultsKey.originY)
     }
 
-    private static func initialFrame() -> NSRect {
-        let size = NSSize(width: 280, height: 148)
+    private static func initialFrame(showsSevenDayUsage: Bool) -> NSRect {
+        let size = NSSize(
+            width: Layout.width,
+            height: height(showsSevenDayUsage: showsSevenDayUsage)
+        )
         let defaults = UserDefaults.standard
         if defaults.object(forKey: DefaultsKey.originX) != nil,
            defaults.object(forKey: DefaultsKey.originY) != nil {
@@ -75,5 +95,9 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
             width: size.width,
             height: size.height
         )
+    }
+
+    private static func height(showsSevenDayUsage: Bool) -> CGFloat {
+        showsSevenDayUsage ? Layout.expandedHeight : Layout.compactHeight
     }
 }
