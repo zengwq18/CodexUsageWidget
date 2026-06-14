@@ -135,7 +135,7 @@ private struct QuotaRow: View {
     let window: RateWindow?
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 7) {
             Text(title)
                 .font(.system(size: 10, weight: .semibold))
                 .frame(width: 38, alignment: .leading)
@@ -151,12 +151,20 @@ private struct QuotaRow: View {
             }
             .frame(height: 6)
 
-            Text(detailText)
+            Text(percentText)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.secondary)
-                .frame(width: 82, alignment: .trailing)
+                .monospacedDigit()
+                .frame(width: 30, alignment: .trailing)
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+
+            Text(resetText)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+                .frame(width: 45, alignment: .center)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
         }
         .frame(height: 15)
         .help(helpText)
@@ -178,9 +186,14 @@ private struct QuotaRow: View {
         }
     }
 
-    private var detailText: String {
-        guard let window else { return "等待连接" }
+    private var percentText: String {
+        guard let window else { return "--%" }
         return "\(window.remainingPercent)%"
+    }
+
+    private var resetText: String {
+        guard let window else { return "等待" }
+        return Formatters.quotaResetText(for: window) ?? "--:--"
     }
 
     private var helpText: String {
