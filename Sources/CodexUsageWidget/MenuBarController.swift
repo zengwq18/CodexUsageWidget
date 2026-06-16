@@ -40,7 +40,7 @@ final class MenuBarController: NSObject {
         button.target = self
         button.image = menuBarIcon()
         button.imagePosition = .imageLeading
-        button.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
+        button.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
     }
 
     private func configurePopover() {
@@ -66,19 +66,19 @@ final class MenuBarController: NSObject {
         guard let button = statusItem.button else { return }
 
         if viewModel.isRefreshing, displayWindow == nil {
-            button.title = "..."
+            button.title = " ..."
             button.toolTip = "Codex 用量：刷新中"
             return
         }
 
         guard let window = displayWindow else {
-            button.title = "--"
+            button.title = " --"
             button.toolTip = "Codex 用量：等待刷新"
             return
         }
 
         let resetText = resetText(for: window)
-        button.title = "\(window.remainingPercent)% \(resetText)"
+        button.title = " \(window.remainingPercent)% \(resetText)"
         button.toolTip = "Codex \(windowTitle(for: window.kind))剩余 \(window.remainingPercent)%，\(resetText) 重置"
     }
 
