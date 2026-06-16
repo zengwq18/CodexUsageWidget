@@ -1,8 +1,14 @@
 import CodexUsageCore
 import SwiftUI
 
+enum UsageSurface {
+    case floatingPanel
+    case menuBar
+}
+
 struct ContentView: View {
     @ObservedObject var viewModel: UsageViewModel
+    var surface: UsageSurface = .floatingPanel
     @State private var showsSettings = false
 
     var body: some View {
@@ -42,10 +48,12 @@ struct ContentView: View {
 
             Spacer(minLength: 4)
 
-            IconButton(systemName: viewModel.pinned ? "pin.fill" : "pin") {
-                viewModel.pinned.toggle()
+            if surface == .floatingPanel {
+                IconButton(systemName: viewModel.pinned ? "pin.fill" : "pin") {
+                    viewModel.pinned.toggle()
+                }
+                .help(viewModel.pinned ? "取消置顶" : "置顶")
             }
-            .help(viewModel.pinned ? "取消置顶" : "置顶")
 
             IconButton(systemName: "arrow.clockwise") {
                 viewModel.refresh()
@@ -58,7 +66,10 @@ struct ContentView: View {
                 showsSettings.toggle()
             }
             .popover(isPresented: $showsSettings, arrowEdge: .top) {
-                SettingsView(viewModel: viewModel)
+                SettingsView(
+                    viewModel: viewModel,
+                    showsPinnedToggle: surface == .floatingPanel
+                )
                     .frame(width: 220)
                     .padding(14)
             }

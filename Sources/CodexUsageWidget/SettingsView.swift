@@ -3,6 +3,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var viewModel: UsageViewModel
+    var showsPinnedToggle = true
     @FocusState private var focusedField: Field?
 
     private enum Field {
@@ -19,7 +20,9 @@ struct SettingsView: View {
                 )
             )
 
-            Toggle("置顶显示", isOn: $viewModel.pinned)
+            if showsPinnedToggle {
+                Toggle("置顶显示", isOn: $viewModel.pinned)
+            }
 
             Toggle("显示 7 日用量", isOn: $viewModel.showsSevenDayUsage)
 
@@ -66,7 +69,7 @@ struct SettingsView: View {
             }
             .font(.system(size: 11))
 
-            Button("退出 Codex 用量浮窗") {
+            Button("退出 Codex 用量") {
                 NSApp.terminate(nil)
             }
             .buttonStyle(.bordered)

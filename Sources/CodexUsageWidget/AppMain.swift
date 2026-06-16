@@ -7,7 +7,7 @@ struct CodexUsageWidgetApp: App {
 
     var body: some Scene {
         Settings {
-            SettingsView(viewModel: appDelegate.viewModel)
+            SettingsView(viewModel: appDelegate.viewModel, showsPinnedToggle: false)
         }
     }
 }
@@ -15,21 +15,11 @@ struct CodexUsageWidgetApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let viewModel = UsageViewModel()
-    private var panelController: FloatingPanelController?
+    private var menuBarController: MenuBarController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-
-        let panelController = FloatingPanelController(viewModel: viewModel)
-        self.panelController = panelController
-        viewModel.onPinnedChanged = { [weak panelController] pinned in
-            panelController?.setPinned(pinned)
-        }
-        viewModel.onShowsSevenDayUsageChanged = { [weak panelController] showsSevenDayUsage in
-            panelController?.setShowsSevenDayUsage(showsSevenDayUsage)
-        }
-
-        panelController.show()
+        menuBarController = MenuBarController(viewModel: viewModel)
         viewModel.start()
     }
 
