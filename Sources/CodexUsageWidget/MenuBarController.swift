@@ -84,8 +84,8 @@ final class MenuBarController: NSObject {
 
     private func updatePopoverSize() {
         popover.contentSize = NSSize(
-            width: 280,
-            height: viewModel.showsSevenDayUsage ? 148 : 94
+            width: UsageWidgetLayout.width,
+            height: viewModel.showsSevenDayUsage ? UsageWidgetLayout.expandedHeight : UsageWidgetLayout.compactHeight
         )
     }
 

@@ -6,6 +6,12 @@ enum UsageSurface {
     case menuBar
 }
 
+enum UsageWidgetLayout {
+    static let width: CGFloat = 280
+    static let expandedHeight: CGFloat = 182
+    static let compactHeight: CGFloat = 94
+}
+
 struct ContentView: View {
     @ObservedObject var viewModel: UsageViewModel
     var surface: UsageSurface = .floatingPanel
@@ -15,7 +21,8 @@ struct ContentView: View {
         VStack(spacing: 8) {
             header
             if viewModel.showsSevenDayUsage {
-                HeatmapView(days: viewModel.snapshot.days)
+                UsageBarChartView(days: viewModel.snapshot.days)
+                    .padding(.top, 6)
             }
             VStack(spacing: 5) {
                 QuotaRow(title: "5 小时", window: viewModel.snapshot.fiveHour)
@@ -24,7 +31,10 @@ struct ContentView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .frame(width: 280, height: viewModel.showsSevenDayUsage ? 148 : 94)
+        .frame(
+            width: UsageWidgetLayout.width,
+            height: viewModel.showsSevenDayUsage ? UsageWidgetLayout.expandedHeight : UsageWidgetLayout.compactHeight
+        )
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -79,9 +89,11 @@ struct ContentView: View {
     }
 }
 
-private struct HeatmapView: View {
+private struct UsageBarChartView: View {
     let days: [DailyUsage]
     @State private var hoveredDay: DailyUsage?
+
+    private let maxBarHeight: CGFloat = 38
 
     private var peak: Int64 {
         max(days.map(\.tokens).max() ?? 0, 1)
@@ -89,33 +101,36 @@ private struct HeatmapView: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            HStack(spacing: 7) {
-                ForEach(days) { day in
-                    VStack(spacing: 3) {
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(color(for: day.tokens))
-                            .frame(width: 27, height: 24)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                    .stroke(strokeColor(for: day), lineWidth: hoveredDay?.id == day.id ? 1.2 : 0.5)
-                            )
+            VStack(spacing: 3) {
+                ZStack(alignment: .bottom) {
+                    HStack(alignment: .bottom, spacing: 5) {
+                        ForEach(days) { day in
+                            dayBar(for: day)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
 
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.24))
+                        .frame(width: 240, height: 1)
+                }
+                .frame(maxWidth: .infinity)
+
+                HStack(spacing: 5) {
+                    ForEach(days) { day in
                         Text(weekday(for: day.date))
                             .font(.system(size: 9, weight: .medium))
                             .foregroundStyle(.secondary)
+                            .frame(width: 30)
+                            .contentShape(Rectangle())
+                            .onHover { isHovering in
+                                updateHover(isHovering, day: day)
+                            }
+                            .help(tooltip(for: day))
                     }
-                    .frame(width: 29)
-                    .contentShape(Rectangle())
-                    .onHover { isHovering in
-                        if isHovering {
-                            hoveredDay = day
-                        } else if hoveredDay?.id == day.id {
-                            hoveredDay = nil
-                        }
-                    }
-                    .help(tooltip(for: day))
                 }
             }
+            .frame(maxWidth: .infinity)
 
             Text(hoverDetailText)
                 .font(.system(size: 10, weight: .medium))
@@ -125,7 +140,46 @@ private struct HeatmapView: View {
                 .frame(maxWidth: .infinity, minHeight: 12, alignment: .center)
                 .opacity(hoveredDay == nil ? 0 : 1)
         }
-        .frame(height: 53)
+        .frame(height: 79)
+    }
+
+    private func dayBar(for day: DailyUsage) -> some View {
+        VStack(spacing: 3) {
+            Text(day.tokens > 0 ? Formatters.compactTokenCount(day.tokens) : " ")
+                .font(.system(size: 8, weight: .medium))
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .frame(width: 30, height: 10)
+
+            ZStack(alignment: .bottom) {
+                if day.tokens > 0 {
+                    Rectangle()
+                        .fill(color(for: day.tokens))
+                        .frame(width: 14, height: barHeight(for: day.tokens))
+                        .overlay(
+                            Rectangle()
+                                .stroke(strokeColor(for: day), lineWidth: hoveredDay?.id == day.id ? 1.2 : 0)
+                        )
+                }
+            }
+            .frame(width: 30, height: maxBarHeight, alignment: .bottom)
+        }
+        .frame(width: 30)
+        .contentShape(Rectangle())
+        .onHover { isHovering in
+            updateHover(isHovering, day: day)
+        }
+        .help(tooltip(for: day))
+    }
+
+    private func updateHover(_ isHovering: Bool, day: DailyUsage) {
+        if isHovering {
+            hoveredDay = day
+        } else if hoveredDay?.id == day.id {
+            hoveredDay = nil
+        }
     }
 
     private func color(for tokens: Int64) -> Color {
@@ -142,6 +196,12 @@ private struct HeatmapView: View {
             green: start.green + (end.green - start.green) * ratio,
             blue: start.blue + (end.blue - start.blue) * ratio
         )
+    }
+
+    private func barHeight(for tokens: Int64) -> CGFloat {
+        guard tokens > 0 else { return 0 }
+        let ratio = min(max(Double(tokens) / Double(peak), 0), 1)
+        return max(4, maxBarHeight * CGFloat(ratio))
     }
 
     private func strokeColor(for day: DailyUsage) -> Color {

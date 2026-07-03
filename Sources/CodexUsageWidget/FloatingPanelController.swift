@@ -3,12 +3,6 @@ import SwiftUI
 
 @MainActor
 final class FloatingPanelController: NSObject, NSWindowDelegate {
-    private enum Layout {
-        static let width: CGFloat = 280
-        static let expandedHeight: CGFloat = 148
-        static let compactHeight: CGFloat = 94
-    }
-
     private enum DefaultsKey {
         static let originX = "panel.origin.x"
         static let originY = "panel.origin.y"
@@ -59,7 +53,7 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
     func setShowsSevenDayUsage(_ showsSevenDayUsage: Bool) {
         let height = Self.height(showsSevenDayUsage: showsSevenDayUsage)
         let topY = panel.frame.maxY
-        panel.setContentSize(NSSize(width: Layout.width, height: height))
+        panel.setContentSize(NSSize(width: UsageWidgetLayout.width, height: height))
 
         var frame = panel.frame
         frame.origin.y = topY - frame.height
@@ -74,7 +68,7 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
 
     private static func initialFrame(showsSevenDayUsage: Bool) -> NSRect {
         let size = NSSize(
-            width: Layout.width,
+            width: UsageWidgetLayout.width,
             height: height(showsSevenDayUsage: showsSevenDayUsage)
         )
         let defaults = UserDefaults.standard
@@ -98,6 +92,6 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
     }
 
     private static func height(showsSevenDayUsage: Bool) -> CGFloat {
-        showsSevenDayUsage ? Layout.expandedHeight : Layout.compactHeight
+        showsSevenDayUsage ? UsageWidgetLayout.expandedHeight : UsageWidgetLayout.compactHeight
     }
 }
