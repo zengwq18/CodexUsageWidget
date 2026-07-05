@@ -46,16 +46,16 @@ dist/CodexUsageWidget.app
 - `account/usage/read`
 - `account/rateLimits/read`
 
-额度更新目前通过定时轮询 `account/rateLimits/read` 实现。
+额度更新目前通过定时轮询 `account/rateLimits/read` 实现。为了显示可用重置机会的具体过期时间，应用还会从 `~/.codex/auth.json` 读取 `tokens.access_token`，只在内存中用它请求 OpenAI 的 `https://chatgpt.com/backend-api/wham/rate-limit-reset-credits` 接口。应用不会保存 access token、refresh token、cookie 或完整唯一 ID。
 
 如果账号用量数据不可用，应用会回退读取本地 Codex 会话 JSONL 文件：
 
 - `~/.codex/sessions`
 - `~/.codex/archived_sessions`
 
-回退读取时，本工具会遍历这些目录中的 `.jsonl` 文件，只尝试解析 `event_msg` 中 `payload.type == "token_count"` 的事件，并读取 `last_token_usage.total_tokens` 统计字段。它不会展示会话正文，不会读取或保存 `auth.json`，也不会向远程服务器上传数据。
+回退读取时，本工具会遍历这些目录中的 `.jsonl` 文件，只尝试解析 `event_msg` 中 `payload.type == "token_count"` 的事件，并读取 `last_token_usage.total_tokens` 统计字段。它不会展示会话正文，也不会向远程服务器上传本地会话内容。
 
-本工具会在 macOS Application Support 目录下保存一个本地缓存文件，通常位于 `~/Library/Application Support/CodexUsageWidget/cache.json`。缓存用于离线或刷新失败时显示最近一次用量数据，不包含认证信息。
+本工具会在 macOS Application Support 目录下保存一个本地缓存文件，通常位于 `~/Library/Application Support/CodexUsageWidget/cache.json`。缓存用于离线或刷新失败时显示最近一次用量数据，不包含认证信息；重置机会缓存仅包含可用次数、状态、标题、获得时间和过期时间。
 
 ### 开源协议
 
@@ -117,16 +117,16 @@ The primary data source is the local Codex app-server protocol:
 - `account/usage/read`
 - `account/rateLimits/read`
 
-Quota updates are currently implemented by periodically polling `account/rateLimits/read`.
+Quota updates are currently implemented by periodically polling `account/rateLimits/read`. To show exact reset-credit expiration times, the app also reads `tokens.access_token` from `~/.codex/auth.json` in memory and uses it to request OpenAI's `https://chatgpt.com/backend-api/wham/rate-limit-reset-credits` endpoint. The app does not save access tokens, refresh tokens, cookies, or full unique IDs.
 
 If account usage data is unavailable, the app falls back to local Codex session JSONL files:
 
 - `~/.codex/sessions`
 - `~/.codex/archived_sessions`
 
-When using the fallback path, the app scans `.jsonl` files in these folders, only attempts to parse `event_msg` entries whose `payload.type` is `token_count`, and reads the `last_token_usage.total_tokens` statistics field. It does not display conversation contents, does not read or store `auth.json`, and does not upload data to a remote server.
+When using the fallback path, the app scans `.jsonl` files in these folders, only attempts to parse `event_msg` entries whose `payload.type` is `token_count`, and reads the `last_token_usage.total_tokens` statistics field. It does not display conversation contents and does not upload local conversation contents to a remote server.
 
-The app stores a local cache file under macOS Application Support, usually at `~/Library/Application Support/CodexUsageWidget/cache.json`. The cache is used to show the most recent usage snapshot when offline or when refresh fails, and it does not contain authentication data.
+The app stores a local cache file under macOS Application Support, usually at `~/Library/Application Support/CodexUsageWidget/cache.json`. The cache is used to show the most recent usage snapshot when offline or when refresh fails, and it does not contain authentication data; reset-credit cache entries only include count, status, title, granted time, and expiration time.
 
 ### License
 

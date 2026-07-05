@@ -60,12 +60,17 @@ public actor CodexAppServerClient {
         return response.dailyUsage()
     }
 
-    public func fetchRateLimits() async throws -> (fiveHour: RateWindow?, weekly: RateWindow?) {
+    public func fetchRateLimits() async throws -> (
+        fiveHour: RateWindow?,
+        weekly: RateWindow?,
+        resetCredits: RateLimitResetCreditsSummary?
+    ) {
         let response: AccountRateLimitsResponse = try await send(
             method: "account/rateLimits/read",
             params: Optional<JSONNull>.none
         )
-        return response.selectedRateLimitSnapshot.rateWindows
+        let windows = response.selectedRateLimitSnapshot.rateWindows
+        return (windows.fiveHour, windows.weekly, response.rateLimitResetCredits)
     }
 
     public nonisolated func observeRateLimitUpdates(pollIntervalSeconds: UInt64 = 300) -> AsyncStream<RateLimitSnapshot> {
@@ -390,6 +395,26 @@ public struct AccountUsageResponse: Decodable, Sendable {
 public struct AccountRateLimitsResponse: Decodable, Sendable {
     let rateLimits: RateLimitSnapshot
     let rateLimitsByLimitId: [String: RateLimitSnapshot]?
+    public let rateLimitResetCredits: RateLimitResetCreditsSummary?
+
+    enum CodingKeys: String, CodingKey {
+        case rateLimits
+        case rateLimitsByLimitId
+        case rateLimitResetCredits
+        case rate_limits
+        case rate_limits_by_limit_id
+        case rate_limit_reset_credits
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        rateLimits = try container.decodeIfPresent(RateLimitSnapshot.self, forKey: .rateLimits)
+            ?? container.decode(RateLimitSnapshot.self, forKey: .rate_limits)
+        rateLimitsByLimitId = try container.decodeIfPresent([String: RateLimitSnapshot].self, forKey: .rateLimitsByLimitId)
+            ?? container.decodeIfPresent([String: RateLimitSnapshot].self, forKey: .rate_limits_by_limit_id)
+        rateLimitResetCredits = try container.decodeIfPresent(RateLimitResetCreditsSummary.self, forKey: .rateLimitResetCredits)
+            ?? container.decodeIfPresent(RateLimitResetCreditsSummary.self, forKey: .rate_limit_reset_credits)
+    }
 
     public var selectedRateLimitSnapshot: RateLimitSnapshot {
         rateLimitsByLimitId?["codex"] ?? rateLimits

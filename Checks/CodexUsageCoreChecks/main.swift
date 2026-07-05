@@ -129,6 +129,54 @@ func checkRateLimitsFallbackToSingleBucket() throws {
     try check(windows.weekly?.remainingPercent == 45, "fallback weekly remaining percent mismatch")
 }
 
+func checkRateLimitResetCreditsDecodeCountAndExpirations() throws {
+    let payload = Data("""
+    {
+      "rateLimits": {
+        "limitId": "codex",
+        "primary": { "usedPercent": 10, "windowDurationMins": 300, "resetsAt": null },
+        "secondary": { "usedPercent": 20, "windowDurationMins": 10080, "resetsAt": null }
+      },
+      "rateLimitResetCredits": {
+        "available_count": 3,
+        "expirationDates": [1781100000],
+        "credits": [
+          {
+            "status": "available",
+            "title": "Full reset (Weekly + 5 hr)",
+            "granted_at": "2026-06-12T04:07:03Z",
+            "expires_at": "2026-07-12T04:07:03Z"
+          },
+          { "expirationDate": 1781200000000 }
+        ]
+      }
+    }
+    """.utf8)
+
+    let response = try JSONDecoder().decode(AccountRateLimitsResponse.self, from: payload)
+    let credits = try require(response.rateLimitResetCredits, "reset credits should decode")
+
+    try check(credits.availableCount == 3, "reset credit count mismatch")
+    try check(credits.expirationDates.count == 3, "reset credit expirations should decode from arrays and objects")
+    let fullReset = try require(
+        credits.credits.first { $0.title == "Full reset (Weekly + 5 hr)" },
+        "detailed reset credit should decode"
+    )
+    try check(fullReset.status == "available", "reset credit status mismatch")
+    try check(
+        fullReset.grantedAt == DateCoding.parseISODate("2026-06-12T04:07:03Z"),
+        "reset credit granted time mismatch"
+    )
+    try check(
+        fullReset.expiresAt == DateCoding.parseISODate("2026-07-12T04:07:03Z"),
+        "reset credit expiration time mismatch"
+    )
+    try check(
+        credits.nearestExpiration == DateCoding.dateFromFlexibleEpoch(1781100000),
+        "nearest reset credit expiration should be sorted first"
+    )
+}
+
 func checkTokenCountEventsAggregateByLocalDay() throws {
     let root = try makeTempDirectory()
     defer { try? FileManager.default.removeItem(at: root) }
@@ -185,6 +233,7 @@ let checks: [(String, () throws -> Void)] = [
     ("duplicateDailyUsageBucketsAreSummed", checkDuplicateDailyUsageBucketsAreSummed),
     ("rateLimitsPreferCodexBucketAndClassifyWindows", checkRateLimitsPreferCodexBucketAndClassifyWindows),
     ("rateLimitsFallbackToSingleBucket", checkRateLimitsFallbackToSingleBucket),
+    ("rateLimitResetCreditsDecodeCountAndExpirations", checkRateLimitResetCreditsDecodeCountAndExpirations),
     ("tokenCountEventsAggregateByLocalDay", checkTokenCountEventsAggregateByLocalDay),
     ("recentWindowWithoutEventsReturnsZeros", checkRecentWindowWithoutEventsReturnsZeros)
 ]

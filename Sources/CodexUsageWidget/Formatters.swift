@@ -18,6 +18,14 @@ enum Formatters {
         return formatter
     }()
 
+    private static let resetCreditDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.timeZone = TimeZone(identifier: "Asia/Shanghai")
+        formatter.dateFormat = "M月d日 HH:mm"
+        return formatter
+    }()
+
     static func fullTokenCount(_ value: Int64) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
@@ -46,5 +54,9 @@ enum Formatters {
         case .unknown:
             return DateCoding.timeFormatter.string(from: resetsAt)
         }
+    }
+
+    static func resetCreditExpirationText(for date: Date) -> String {
+        resetCreditDateFormatter.string(from: date)
     }
 }

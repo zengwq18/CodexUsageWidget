@@ -8,8 +8,8 @@ enum UsageSurface {
 
 enum UsageWidgetLayout {
     static let width: CGFloat = 280
-    static let expandedHeight: CGFloat = 182
-    static let compactHeight: CGFloat = 94
+    static let expandedHeight: CGFloat = 206
+    static let compactHeight: CGFloat = 116
 }
 
 struct ContentView: View {
@@ -27,6 +27,7 @@ struct ContentView: View {
             VStack(spacing: 5) {
                 QuotaRow(title: "5 小时", window: viewModel.snapshot.fiveHour)
                 QuotaRow(title: "本周", window: viewModel.snapshot.weekly)
+                ResetCreditsRow(summary: viewModel.snapshot.resetCredits)
             }
         }
         .padding(.horizontal, 12)
@@ -86,6 +87,128 @@ struct ContentView: View {
             .help("设置")
         }
         .foregroundStyle(.primary)
+    }
+}
+
+private struct ResetCreditsRow: View {
+    let summary: RateLimitResetCreditsSummary?
+    @State private var showsDetails = false
+
+    var body: some View {
+        Button {
+            guard summary != nil else { return }
+            showsDetails.toggle()
+        } label: {
+            HStack(spacing: 6) {
+                Text("可用重置")
+                    .font(.system(size: 10, weight: .semibold))
+
+                Spacer(minLength: 4)
+
+                Text(summaryText)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+            .padding(.horizontal, 7)
+            .frame(maxWidth: .infinity, minHeight: 21, maxHeight: 21)
+            .background(Color.secondary.opacity(0.11), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(summary == nil)
+        .popover(isPresented: $showsDetails, arrowEdge: .bottom) {
+            ResetCreditsDetailsView(summary: summary)
+                .frame(width: 210)
+                .padding(12)
+        }
+        .help(helpText)
+    }
+
+    private var summaryText: String {
+        guard let summary else { return "等待数据" }
+        guard summary.availableCount > 0 else { return "0 次" }
+        guard let nearestExpiration = summary.nearestExpiration else {
+            return "\(summary.availableCount) 次 · 过期未知"
+        }
+        return "\(summary.availableCount) 次 · \(Formatters.resetCreditExpirationText(for: nearestExpiration))"
+    }
+
+    private var helpText: String {
+        guard let summary else { return "等待 Codex 返回重置机会" }
+        guard summary.availableCount > 0 else { return "当前没有可用的重置机会" }
+        if summary.expirationDates.isEmpty {
+            return "可用重置 \(summary.availableCount) 次\n未返回过期时间"
+        }
+        let expirations = summary.expirationDates.enumerated()
+            .map { index, date in "#\(index + 1) \(Formatters.resetCreditExpirationText(for: date))" }
+            .joined(separator: "\n")
+        return "可用重置 \(summary.availableCount) 次\n\(expirations)"
+    }
+}
+
+private struct ResetCreditsDetailsView: View {
+    let summary: RateLimitResetCreditsSummary?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text("过期时间")
+                    .font(.system(size: 12, weight: .semibold))
+                Spacer()
+                Text(countText)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+
+            Divider()
+
+            if let summary, !summary.expirationDates.isEmpty {
+                ForEach(Array(summary.expirationDates.enumerated()), id: \.offset) { index, date in
+                    HStack(spacing: 8) {
+                        Text("第 \(index + 1) 次")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(Formatters.resetCreditExpirationText(for: date))
+                            .monospacedDigit()
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                }
+
+                if summary.expirationDates.count < summary.availableCount {
+                    Text("另有 \(summary.availableCount - summary.expirationDates.count) 次过期时间未知")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            } else {
+                Text(emptyText)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var countText: String {
+        guard let summary else { return "等待" }
+        return "\(summary.availableCount) 次"
+    }
+
+    private var emptyText: String {
+        guard let summary else {
+            return "等待 Codex 返回重置机会。"
+        }
+
+        if summary.availableCount == 0 {
+            return "当前没有可用的重置机会。"
+        }
+
+        return "当前 Codex 接口只返回可用次数，暂未返回各次过期时间。"
     }
 }
 
