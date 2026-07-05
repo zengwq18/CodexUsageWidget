@@ -100,6 +100,11 @@ private struct ResetCreditsRow: View {
             showsDetails.toggle()
         } label: {
             HStack(spacing: 6) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 12)
+
                 Text("可用重置")
                     .font(.system(size: 10, weight: .semibold))
 
