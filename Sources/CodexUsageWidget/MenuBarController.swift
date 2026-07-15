@@ -125,7 +125,12 @@ final class MenuBarController: NSObject {
     }
 
     private func templateIcon(in resourcesURL: URL) -> NSImage? {
-        let iconNames = ["codexTemplate@2x", "codexTemplate"]
+        let iconNames = [
+            "chatgptTemplate@2x",
+            "chatgptTemplate",
+            "codexTemplate@2x",
+            "codexTemplate"
+        ]
         for iconName in iconNames {
             let url = resourcesURL.appendingPathComponent(iconName).appendingPathExtension("png")
             if let image = NSImage(contentsOf: url) {
