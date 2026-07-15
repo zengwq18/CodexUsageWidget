@@ -46,7 +46,7 @@ dist/CodexUsageWidget.app
 - `account/usage/read`
 - `account/rateLimits/read`
 
-额度更新目前通过定时轮询 `account/rateLimits/read` 实现。为了显示可用重置机会的具体过期时间，应用还会从 `~/.codex/auth.json` 读取 `tokens.access_token`，只在内存中用它请求 OpenAI 的 `https://chatgpt.com/backend-api/wham/rate-limit-reset-credits` 接口。应用不会保存 access token、refresh token、cookie 或完整唯一 ID。
+额度及可用重置机会的过期时间均来自 `account/rateLimits/read`。应用不会读取 `~/.codex/auth.json`，也不会自行处理或保存 access token、refresh token、cookie 或完整唯一 ID。
 
 如果账号用量数据不可用，应用会回退读取本地 Codex 会话 JSONL 文件：
 
@@ -117,7 +117,7 @@ The primary data source is the local Codex app-server protocol:
 - `account/usage/read`
 - `account/rateLimits/read`
 
-Quota updates are currently implemented by periodically polling `account/rateLimits/read`. To show exact reset-credit expiration times, the app also reads `tokens.access_token` from `~/.codex/auth.json` in memory and uses it to request OpenAI's `https://chatgpt.com/backend-api/wham/rate-limit-reset-credits` endpoint. The app does not save access tokens, refresh tokens, cookies, or full unique IDs.
+Quota and reset-credit expiration times both come from `account/rateLimits/read`. The app does not read `~/.codex/auth.json`, nor does it directly handle or save access tokens, refresh tokens, cookies, or full unique IDs.
 
 If account usage data is unavailable, the app falls back to local Codex session JSONL files:
 

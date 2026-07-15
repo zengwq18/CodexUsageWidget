@@ -2,18 +2,15 @@ import Foundation
 
 public struct UsageRepository: Sendable {
     private let appServer: CodexAppServerClient
-    private let resetCreditsClient: RateLimitResetCreditsClient
     private let localParser: LocalUsageLogParser
     private let cacheStore: CacheStore
 
     public init(
         appServer: CodexAppServerClient = CodexAppServerClient(),
-        resetCreditsClient: RateLimitResetCreditsClient = RateLimitResetCreditsClient(),
         localParser: LocalUsageLogParser = LocalUsageLogParser(),
         cacheStore: CacheStore = CacheStore()
     ) {
         self.appServer = appServer
-        self.resetCreditsClient = resetCreditsClient
         self.localParser = localParser
         self.cacheStore = cacheStore
     }
@@ -42,7 +39,7 @@ public struct UsageRepository: Sendable {
 
         let fiveHour: RateWindow?
         let weekly: RateWindow?
-        var resetCredits: RateLimitResetCreditsSummary?
+        let resetCredits: RateLimitResetCreditsSummary?
         do {
             let limits = try await appServer.fetchRateLimits()
             fiveHour = limits.fiveHour
@@ -53,15 +50,6 @@ public struct UsageRepository: Sendable {
             weekly = cached?.weekly
             resetCredits = cached?.resetCredits
             isStale = true
-        }
-
-        do {
-            resetCredits = try await resetCreditsClient.fetch()
-        } catch {
-            if resetCredits == nil, let cachedResetCredits = cached?.resetCredits {
-                resetCredits = cachedResetCredits
-                isStale = true
-            }
         }
 
         let snapshot = UsageSnapshot(

@@ -138,16 +138,26 @@ func checkRateLimitResetCreditsDecodeCountAndExpirations() throws {
         "secondary": { "usedPercent": 20, "windowDurationMins": 10080, "resetsAt": null }
       },
       "rateLimitResetCredits": {
-        "available_count": 3,
-        "expirationDates": [1781100000],
+        "availableCount": 3,
         "credits": [
           {
             "status": "available",
             "title": "Full reset (Weekly + 5 hr)",
-            "granted_at": "2026-06-12T04:07:03Z",
-            "expires_at": "2026-07-12T04:07:03Z"
+            "grantedAt": 1781237223,
+            "expiresAt": 1783829223
           },
-          { "expirationDate": 1781200000000 }
+          {
+            "status": "available",
+            "title": "Full reset",
+            "grantedAt": 1782519259,
+            "expiresAt": 1785111259
+          },
+          {
+            "status": "available",
+            "title": "Full reset",
+            "grantedAt": 1782938170,
+            "expiresAt": 1785530170
+          }
         ]
       }
     }
@@ -157,22 +167,22 @@ func checkRateLimitResetCreditsDecodeCountAndExpirations() throws {
     let credits = try require(response.rateLimitResetCredits, "reset credits should decode")
 
     try check(credits.availableCount == 3, "reset credit count mismatch")
-    try check(credits.expirationDates.count == 3, "reset credit expirations should decode from arrays and objects")
+    try check(credits.expirationDates.count == 3, "app-server reset credit expirations should decode")
     let fullReset = try require(
         credits.credits.first { $0.title == "Full reset (Weekly + 5 hr)" },
         "detailed reset credit should decode"
     )
     try check(fullReset.status == "available", "reset credit status mismatch")
     try check(
-        fullReset.grantedAt == DateCoding.parseISODate("2026-06-12T04:07:03Z"),
+        fullReset.grantedAt == DateCoding.dateFromFlexibleEpoch(1781237223),
         "reset credit granted time mismatch"
     )
     try check(
-        fullReset.expiresAt == DateCoding.parseISODate("2026-07-12T04:07:03Z"),
+        fullReset.expiresAt == DateCoding.dateFromFlexibleEpoch(1783829223),
         "reset credit expiration time mismatch"
     )
     try check(
-        credits.nearestExpiration == DateCoding.dateFromFlexibleEpoch(1781100000),
+        credits.nearestExpiration == DateCoding.dateFromFlexibleEpoch(1783829223),
         "nearest reset credit expiration should be sorted first"
     )
 }

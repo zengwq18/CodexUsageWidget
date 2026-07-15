@@ -41,15 +41,23 @@ public actor CodexAppServerClient {
     private var didInitialize = false
 
     public init(
-        executablePath: String = "/Applications/Codex.app/Contents/Resources/codex",
+        executablePath: String? = nil,
         requestTimeoutSeconds: TimeInterval = 8
     ) {
-        self.executablePath = executablePath
+        self.executablePath = executablePath ?? Self.defaultExecutablePath()
         self.requestTimeoutSeconds = requestTimeoutSeconds
     }
 
     deinit {
         process?.terminate()
+    }
+
+    private static func defaultExecutablePath() -> String {
+        let candidates = [
+            "/Applications/ChatGPT.app/Contents/Resources/codex",
+            "/Applications/Codex.app/Contents/Resources/codex"
+        ]
+        return candidates.first(where: FileManager.default.isExecutableFile(atPath:)) ?? candidates[0]
     }
 
     public func fetchAccountUsage() async throws -> [DailyUsage] {
